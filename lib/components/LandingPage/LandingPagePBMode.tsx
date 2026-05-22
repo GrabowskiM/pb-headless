@@ -1,10 +1,15 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useState } from 'react';
 
 import { syncFromPB } from '../../helpers/communication';
-import { type DispatchEventMessage, type UpdateFieldDataMessage } from '../../types/PBMessages';
+import { type DispatchEventMessage, type InitModeMessage, type UpdateFieldDataMessage } from '../../types/PBMessages';
+import { type FieldValue } from '../../types/FieldValue';
 import { BlocksConfigContext } from '../../context/BlocksConfig';
 import { BlocksIdMapContext } from '../../context/BlocksIdMap';
 import { FieldValueContext } from '../../context/FieldValue';
+
+export interface LandingPagePBModeHandle {
+    setInitData: (data?: InitModeMessage) => void;
+}
 
 interface Props {
     blocksConfig?: unknown[];
@@ -13,66 +18,78 @@ interface Props {
     children: ReactNode;
 }
 
-const LandingPagePBMode = ({
-    blocksConfig: blocksConfigProp,
-    blocksIdMap: blocksIdMapProp,
-    fieldValue: fieldValueProp,
-    children,
-}: Props) => {
-    const [blocksConfig, setBlocksConfig] = useState<unknown[]>(blocksConfigProp ?? []);
-    const [prevBlocksConfigProp, setPrevBlocksConfigProp] = useState<unknown[] | undefined>(blocksConfigProp);
-    const [blocksIdMap, setBlocksIdMap] = useState<Map<string, unknown>>(blocksIdMapProp ?? new Map());
-    const [prevBlocksIdMapProp, setPrevBlocksIdMapProp] = useState<Map<string, unknown> | undefined>(blocksIdMapProp);
-    const [fieldValue, setFieldValue] = useState<unknown>(fieldValueProp);
-    const [prevFieldValueProp, setPrevFieldValueProp] = useState<unknown>(fieldValueProp);
+const LandingPagePBMode = forwardRef<LandingPagePBModeHandle, Props>(
+    ({ blocksConfig: blocksConfigProp, blocksIdMap: blocksIdMapProp, fieldValue: fieldValueProp, children }: Props, ref) => {
+        const [blocksConfig, setBlocksConfig] = useState<unknown[]>(blocksConfigProp ?? []);
+        const [prevBlocksConfigProp, setPrevBlocksConfigProp] = useState<unknown[] | undefined>(blocksConfigProp);
+        const [blocksIdMap, setBlocksIdMap] = useState<Map<string, unknown>>(blocksIdMapProp ?? new Map());
+        const [prevBlocksIdMapProp, setPrevBlocksIdMapProp] = useState<Map<string, unknown> | undefined>(blocksIdMapProp);
+        const [fieldValue, setFieldValue] = useState<unknown>(fieldValueProp);
+        const [prevFieldValueProp, setPrevFieldValueProp] = useState<unknown>(fieldValueProp);
+        const [isInitialized, setIsInitialized] = useState(false);
 
-    if (blocksConfigProp !== prevBlocksConfigProp) {
-        setPrevBlocksConfigProp(blocksConfigProp);
-        setBlocksConfig(blocksConfigProp ?? []);
-    }
+        if (blocksConfigProp !== prevBlocksConfigProp) {
+            setPrevBlocksConfigProp(blocksConfigProp);
+            setBlocksConfig(blocksConfigProp ?? []);
+        }
 
-    if (blocksIdMapProp !== prevBlocksIdMapProp) {
-        setPrevBlocksIdMapProp(blocksIdMapProp);
-        setBlocksIdMap(blocksIdMapProp ?? new Map());
-    }
+        if (blocksIdMapProp !== prevBlocksIdMapProp) {
+            setPrevBlocksIdMapProp(blocksIdMapProp);
+            setBlocksIdMap(blocksIdMapProp ?? new Map());
+        }
 
-    if (fieldValueProp !== prevFieldValueProp) {
-        setPrevFieldValueProp(fieldValueProp);
-        setFieldValue(fieldValueProp);
-    }
+        if (fieldValueProp !== prevFieldValueProp) {
+            setPrevFieldValueProp(fieldValueProp);
+            setFieldValue(fieldValueProp);
+        }
 
-    useEffect(() => {
-        const cleanups = [
-            syncFromPB<UpdateFieldDataMessage>(
-                'PB:UPDATE_FIELD_DATA',
-                (data) => {
+        useImperativeHandle(ref, () => ({
+            setInitData: (data?: InitModeMessage) => {
+                if (data) {
+                    setBlocksConfig(data.blocksConfig);
+                    setBlocksIdMap(data.blocksIdMap);
+                    setFieldValue(data.fieldValue);
+                }
+                setIsInitialized(true);
+            },
+        }));
+
+        useEffect(() => {
+            const cleanups = [
+                syncFromPB<UpdateFieldDataMessage>('PB:UPDATE_FIELD_DATA', (data) => {
                     console.log('Received UPDATE_FIELD_DATA', data);
                     if (data) {
                         setFieldValue(data.fieldValue);
                         setBlocksIdMap(data.blocksIdMap);
                         setBlocksConfig(data.blocksConfig);
                     }
-                },
-            ),
-            syncFromPB<ScrollToOptions>('PB:SCROLL_BY', (data) => {
-                window.scrollBy(data);
-            }),
-            syncFromPB<DispatchEventMessage>('PB:DISPATCH_EVENT', (data) => {
-                console.log(data);
-                document.body.dispatchEvent(new CustomEvent(data.eventName, { detail: data.eventDetail }));
-            }),
-        ];
+                }),
+                syncFromPB<ScrollToOptions>('PB:SCROLL_BY', (data) => {
+                    window.scrollBy(data);
+                }),
+                syncFromPB<DispatchEventMessage>('PB:DISPATCH_EVENT', (data) => {
+                    console.log(data);
+                    document.body.dispatchEvent(new CustomEvent(data.eventName, { detail: data.eventDetail }));
+                }),
+            ];
 
-        return () => cleanups.forEach((cleanup) => cleanup());
-    }, []);
+            return () => cleanups.forEach((cleanup) => cleanup());
+        }, []);
 
-    return (
-        <FieldValueContext.Provider value={fieldValue}>
-            <BlocksConfigContext.Provider value={blocksConfig}>
-                <BlocksIdMapContext.Provider value={blocksIdMap}>{children}</BlocksIdMapContext.Provider>
-            </BlocksConfigContext.Provider>
-        </FieldValueContext.Provider>
-    );
-};
+        if (!isInitialized) {
+            return null;
+        }
+
+        return (
+            <FieldValueContext.Provider value={fieldValue as FieldValue | undefined}>
+                <BlocksConfigContext.Provider value={blocksConfig}>
+                    <BlocksIdMapContext.Provider value={blocksIdMap}>{children}</BlocksIdMapContext.Provider>
+                </BlocksConfigContext.Provider>
+            </FieldValueContext.Provider>
+        );
+    },
+);
+
+LandingPagePBMode.displayName = 'LandingPagePBMode';
 
 export default LandingPagePBMode;

@@ -1,45 +1,65 @@
-import { type ReactNode, useEffect, useState } from 'react';
+import { type ComponentType, type ReactNode, useEffect, useRef, useState } from 'react';
 
-import { syncToPB } from '../../helpers/communication';
+import { syncFromPB, syncToPB } from '../../helpers/communication';
+import { BlockRegistryContext, type BlockRegistry, type BlockComponentProps } from '../../context/BlockRegistry';
 import { IsPBModeContext } from '../../context/IsPBMode';
-import LandingPagePBMode from './LandingPagePBMode';
+import { type InitModeMessage } from '../../types/PBMessages';
+import FallbackBlock from '../FallbackBlock';
+import LandingPagePBMode, { type LandingPagePBModeHandle } from './LandingPagePBMode';
 
 export interface Props {
     blocksConfig?: unknown[];
     blocksIdMap?: Map<string, unknown>;
     fieldValue?: unknown;
+    blockComponents?: Record<string, ComponentType<BlockComponentProps>>;
     children: ReactNode;
 }
 
-const LandingPage = ({ blocksConfig, blocksIdMap, fieldValue, children }: Props) => {
-    const [isPBMode, setIsPBMode] = useState(true);
+const LandingPage = ({ blocksConfig, blocksIdMap, fieldValue, blockComponents, children }: Props) => {
+    const [isPBMode, setIsPBMode] = useState(false);
+    const pbInitDataRef = useRef<InitModeMessage | null>(null);
+    const landingPagePBModeRef = useRef<LandingPagePBModeHandle>(null);
+    const blockRegistryRef = useRef<BlockRegistry>({
+        components: blockComponents ?? {},
+        fallback: (block) => <FallbackBlock type={block.type} name={block.name} />,
+    });
 
     useEffect(() => {
-        const handleMessage = (event: MessageEvent<{ type: string }>): void => {
-            if (event.data.type === 'PB:INIT_MODE') {
-                setIsPBMode(true);
-            }
-        };
-
         syncToPB<never>('APP:INITIALIZED');
 
-        window.addEventListener('message', handleMessage);
+        const removeInitModeListener = syncFromPB<InitModeMessage | undefined>('PB:INIT_MODE', (data) => {
+            pbInitDataRef.current = data ?? null;
+            setIsPBMode(true);
+        });
 
         return () => {
-            window.removeEventListener('message', handleMessage);
+            removeInitModeListener();
         };
     }, []);
 
+    useEffect(() => {
+        if (isPBMode) {
+            landingPagePBModeRef.current?.setInitData(pbInitDataRef.current ?? undefined);
+        }
+    }, [isPBMode]);
+
     return (
-        <IsPBModeContext.Provider value={isPBMode}>
-            {isPBMode ? (
-                <LandingPagePBMode blocksConfig={blocksConfig} blocksIdMap={blocksIdMap} fieldValue={fieldValue}>
-                    {children}
-                </LandingPagePBMode>
-            ) : (
-                children
-            )}
-        </IsPBModeContext.Provider>
+        <BlockRegistryContext.Provider value={blockRegistryRef}>
+            <IsPBModeContext.Provider value={isPBMode}>
+                {isPBMode ? (
+                    <LandingPagePBMode
+                        ref={landingPagePBModeRef}
+                        blocksConfig={blocksConfig}
+                        blocksIdMap={blocksIdMap}
+                        fieldValue={fieldValue}
+                    >
+                        {children}
+                    </LandingPagePBMode>
+                ) : (
+                    children
+                )}
+            </IsPBModeContext.Provider>
+        </BlockRegistryContext.Provider>
     );
 };
 

@@ -1,3 +1,5 @@
 import { createContext } from 'react';
 
-export const FieldValueContext = createContext<unknown>(undefined);
+import { type FieldValue } from '../types/FieldValue';
+
+export const FieldValueContext = createContext<FieldValue | undefined>(undefined);

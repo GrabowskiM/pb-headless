@@ -11,5 +11,7 @@ footer {
 
 main {
   padding: 32px;
-  flex: 1;
+  flex-wrap: nowrap;
+  gap: 32px;
+  display: flex;
 }

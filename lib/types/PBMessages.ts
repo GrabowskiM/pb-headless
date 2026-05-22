@@ -4,6 +4,12 @@ export interface UpdateFieldDataMessage {
     blocksConfig: unknown[];
 }
 
+export interface InitModeMessage {
+    blocksConfig: unknown[];
+    blocksIdMap: Map<string, unknown>;
+    fieldValue: unknown;
+}
+
 export interface DispatchEventMessage {
     eventName: string;
     eventDetail: unknown;

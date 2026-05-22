@@ -5,8 +5,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { IsPBModeContext } from '../context/IsPBMode';
 import useIsPBMode from './useIsPBMode';
 
-const mockIframe = () =>
-    vi.spyOn(window, 'self', 'get').mockReturnValue({} as Window & typeof globalThis);
+const mockIframe = () => vi.spyOn(window, 'self', 'get').mockReturnValue({} as Window & typeof globalThis);
 
 describe('useIsPBMode', () => {
     afterEach(() => {

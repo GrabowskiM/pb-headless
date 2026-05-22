@@ -8,9 +8,7 @@ describe('createCssClassNames', () => {
     });
 
     it('appends conditional classes that are true', () => {
-        expect(createCssClassNames('block', { 'block--active': true, 'block--hidden': false })).toBe(
-            'block block--active',
-        );
+        expect(createCssClassNames('block', { 'block--active': true, 'block--hidden': false })).toBe('block block--active');
     });
 
     it('does not append conditional classes that are false', () => {
@@ -30,8 +28,6 @@ describe('createCssClassNames', () => {
     });
 
     it('accepts an array of base classes', () => {
-        expect(createCssClassNames(['block', 'block--modifier'], { 'block--active': true })).toBe(
-            'block block--modifier block--active',
-        );
+        expect(createCssClassNames(['block', 'block--modifier'], { 'block--active': true })).toBe('block block--modifier block--active');
     });
 });

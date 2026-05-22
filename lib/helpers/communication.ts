@@ -14,7 +14,7 @@ export const syncFromPB = <T = unknown>(
     type: string,
     handler: (data: T) => void,
     listenerOptions: boolean | AddEventListenerOptions = false,
-): () => void => {
+): (() => void) => {
     const handleMessage = (event: MessageEvent): void => {
         const { type: eventType, data } = event.data as { type: string; data: T };
 

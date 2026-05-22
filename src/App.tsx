@@ -1,5 +1,9 @@
 import LandingPage from '../lib/components/LandingPage';
+import Page from './Page';
 import demoData from './demoData';
+import TagBlock from './blocks/TagBlock';
+import RichTextBlock from './blocks/RichTextBlock';
+import './ibexa-page-builder-iframe-editor-ui-css.css';
 import './App.css';
 
 function App() {
@@ -8,16 +12,9 @@ function App() {
             blocksConfig={demoData.blocksConfig}
             blocksIdMap={demoData.blocksIdMap}
             fieldValue={demoData.fieldValue}
+            blockComponents={{ tag: TagBlock, richtext: RichTextBlock }}
         >
-            <header>
-                <h1>Page Builder Headless</h1>
-            </header>
-            <main>
-                <p>Landing page content</p>
-            </main>
-            <footer>
-                <p>Footer</p>
-            </footer>
+            <Page />
         </LandingPage>
     );
 }
