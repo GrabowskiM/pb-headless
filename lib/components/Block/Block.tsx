@@ -13,11 +13,13 @@ const Block = ({ block }: Props) => {
     const blockRef = useRef<HTMLDivElement>(null);
     const wasHoveredRef = useRef(false);
     const [isDragging, setIsDragging] = useState(false);
+    const [isRemoving, setIsRemoving] = useState(false);
     const registry = useBlockRegistry()!;
     const BlockComponent = registry.current.components[block.type];
     const fallback = registry.current.fallback;
     const className = createCssClassNames(['landing-page__block', `block_${block.type}`, 'c-pb-block-preview'], {
         'c-pb-block-preview--is-dragging-out': isDragging,
+        'c-pb-block-preview--is-removing': isRemoving,
     });
 
     useEffect(() => {
@@ -60,6 +62,16 @@ const Block = ({ block }: Props) => {
         );
 
         syncFromPB<{ blockId: string }>(
+            'PB:BLOCK_REMOVE',
+            (data) => {
+                if (data.blockId === block.id) {
+                    setIsRemoving(true);
+                }
+            },
+            { signal },
+        );
+
+        syncFromPB<{ blockId: string }>(
             'PB:DRAG_START_PREVIEW',
             (data) => {
                 if (data.blockId === block.id) {
@@ -82,8 +94,21 @@ const Block = ({ block }: Props) => {
         };
     }, [block]);
 
+    const handleAnimationEnd = (event: React.AnimationEvent) => {
+        if (event.animationName === 'remove-field') {
+            syncToPB('APP:BLOCK_REMOVE_RESPONSE', { blockId: block.id });
+        }
+    };
+
     return (
-        <div ref={blockRef} className={className} data-ibexa-block-id={block.id} draggable={isDragging} style={{ position: 'relative' }}>
+        <div
+            ref={blockRef}
+            className={className}
+            data-ibexa-block-id={block.id}
+            draggable={isDragging}
+            style={{ position: 'relative' }}
+            onAnimationEnd={handleAnimationEnd}
+        >
             <div className="c-pb-block-preview__inner">
                 {BlockComponent ? <BlockComponent data={block.attributes} /> : fallback?.(block)}
             </div>
