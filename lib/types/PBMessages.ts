@@ -1,11 +1,13 @@
+import { type BlockConfig } from '../context/BlocksConfig';
+
 export interface UpdateFieldDataMessage {
     fieldValue: unknown;
     blocksIdMap: Map<string, unknown>;
-    blocksConfig: unknown[];
+    blocksConfig: BlockConfig[];
 }
 
 export interface InitModeMessage {
-    blocksConfig: unknown[];
+    blocksConfig: BlockConfig[];
     blocksIdMap: Map<string, unknown>;
     fieldValue: unknown;
 }

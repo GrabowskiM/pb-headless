@@ -3,12 +3,13 @@ import { type ComponentType, type ReactNode, useEffect, useRef, useState } from 
 import { syncFromPB, syncToPB } from '../../helpers/communication';
 import { BlockRegistryContext, type BlockRegistry, type BlockComponentProps } from '../../context/BlockRegistry';
 import { IsPBModeContext } from '../../context/IsPBMode';
+import { type BlockConfig } from '../../context/BlocksConfig';
 import { type InitModeMessage } from '../../types/PBMessages';
 import FallbackBlock from '../FallbackBlock';
 import LandingPagePBMode, { type LandingPagePBModeHandle } from './LandingPagePBMode';
 
 export interface Props {
-    blocksConfig?: unknown[];
+    blocksConfig?: BlockConfig[];
     blocksIdMap?: Map<string, unknown>;
     fieldValue?: unknown;
     blockComponents?: Record<string, ComponentType<BlockComponentProps>>;

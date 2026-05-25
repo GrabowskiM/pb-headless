@@ -3,7 +3,7 @@ import { forwardRef, type ReactNode, useEffect, useImperativeHandle, useState } 
 import { syncFromPB } from '../../helpers/communication';
 import { type DispatchEventMessage, type InitModeMessage, type UpdateFieldDataMessage } from '../../types/PBMessages';
 import { type FieldValue } from '../../types/FieldValue';
-import { BlocksConfigContext } from '../../context/BlocksConfig';
+import { BlocksConfigContext, type BlockConfig } from '../../context/BlocksConfig';
 import { BlocksIdMapContext } from '../../context/BlocksIdMap';
 import { FieldValueContext } from '../../context/FieldValue';
 
@@ -12,7 +12,7 @@ export interface LandingPagePBModeHandle {
 }
 
 interface Props {
-    blocksConfig?: unknown[];
+    blocksConfig?: BlockConfig[];
     blocksIdMap?: Map<string, unknown>;
     fieldValue?: unknown;
     children: ReactNode;
@@ -20,8 +20,8 @@ interface Props {
 
 const LandingPagePBMode = forwardRef<LandingPagePBModeHandle, Props>(
     ({ blocksConfig: blocksConfigProp, blocksIdMap: blocksIdMapProp, fieldValue: fieldValueProp, children }: Props, ref) => {
-        const [blocksConfig, setBlocksConfig] = useState<unknown[]>(blocksConfigProp ?? []);
-        const [prevBlocksConfigProp, setPrevBlocksConfigProp] = useState<unknown[] | undefined>(blocksConfigProp);
+        const [blocksConfig, setBlocksConfig] = useState<BlockConfig[]>(blocksConfigProp ?? []);
+        const [prevBlocksConfigProp, setPrevBlocksConfigProp] = useState<BlockConfig[] | undefined>(blocksConfigProp);
         const [blocksIdMap, setBlocksIdMap] = useState<Map<string, unknown>>(blocksIdMapProp ?? new Map());
         const [prevBlocksIdMapProp, setPrevBlocksIdMapProp] = useState<Map<string, unknown> | undefined>(blocksIdMapProp);
         const [fieldValue, setFieldValue] = useState<unknown>(fieldValueProp);
