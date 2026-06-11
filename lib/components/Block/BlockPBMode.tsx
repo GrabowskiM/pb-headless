@@ -2,9 +2,9 @@ import { useEffect, useRef, useState } from 'react';
 
 import { syncToPB, syncFromPB } from '../../helpers/communication';
 import { createCssClassNames } from '../../helpers/cssClassNames';
-import { validateBlock, getInvalidAttributeIds } from '../../helpers/validation';
+import { getInvalidAttributeIds } from '../../helpers/validation';
 import { useBlocksConfig } from '../../context/BlocksConfig';
-import useBlockRegistry from '../../hooks/useBlockRegistry';
+import useBlock from '../../hooks/useBlock';
 import { type Block as BlockData } from '../../types/FieldValue';
 
 export interface Props {
@@ -13,16 +13,13 @@ export interface Props {
 
 const BlockPBMode = ({ block }: Props) => {
     const blockRef = useRef<HTMLDivElement>(null);
-    const wasHoveredRef = useRef(false);
     const [isDragging, setIsDragging] = useState(false);
     const [isRemoving, setIsRemoving] = useState(false);
-    const registry = useBlockRegistry()!;
+    const content = useBlock(block);
     const blocksConfig = useBlocksConfig();
-    const BlockComponent = registry.current.components[block.type];
-    const fallback = registry.current.fallback;
     const blockConfig = blocksConfig.find((config) => config.type === block.type);
     const invalidAttributeIds = blockConfig ? getInvalidAttributeIds(block, blockConfig) : [];
-    const isInvalid = blockConfig ? !validateBlock(block, blockConfig) : false;
+    const isInvalid = invalidAttributeIds.length > 0;
     const innerClassName = createCssClassNames('c-pb-block-preview__inner', { 'c-pb-block-preview__inner--invalid': isInvalid });
     const className = createCssClassNames(['landing-page__block', `block_${block.type}`, 'c-pb-block-preview'], {
         'c-pb-block-preview--is-dragging-out': isDragging,
@@ -33,8 +30,6 @@ const BlockPBMode = ({ block }: Props) => {
         if (!blockRef.current) {
             return;
         }
-
-        wasHoveredRef.current = false;
 
         const abortController = new AbortController();
         const { signal } = abortController;
@@ -47,81 +42,11 @@ const BlockPBMode = ({ block }: Props) => {
             { signal },
         );
 
-        blockRef.current.addEventListener(
-            'mousemove',
-            () => {
-                if (!wasHoveredRef.current && blockRef.current) {
-                    const { top, left } = blockRef.current.getBoundingClientRect();
-
-                    wasHoveredRef.current = true;
-                    syncToPB('APP:BLOCK_HOVER', { blockId: block.id, position: { top, left } });
-                }
-            },
-            { signal },
-        );
-
-        blockRef.current.addEventListener(
-            'mouseleave',
-            () => {
-                wasHoveredRef.current = false;
-                syncToPB('APP:BLOCK_UNHOVER', { blockId: block.id });
-            },
-            { signal },
-        );
-
-        const lastMousePosRef = { x: 0, y: 0 };
-
-        window.addEventListener(
-            'mousemove',
-            (e) => {
-                lastMousePosRef.x = e.clientX;
-                lastMousePosRef.y = e.clientY;
-            },
-            { signal, passive: true },
-        );
-
-        window.addEventListener(
-            'scroll',
-            () => {
-                if (!blockRef.current) {
-                    return;
-                }
-
-                const { top, left } = blockRef.current.getBoundingClientRect();
-
-                if (wasHoveredRef.current) {
-                    syncToPB('APP:BLOCK_POSITION_UPDATE', { blockId: block.id, position: { top, left } });
-
-                    return;
-                }
-
-                const el = document.elementFromPoint(lastMousePosRef.x, lastMousePosRef.y);
-
-                if (blockRef.current.contains(el) || el === blockRef.current) {
-                    wasHoveredRef.current = true;
-                    syncToPB('APP:BLOCK_HOVER', { blockId: block.id, position: { top, left } });
-                }
-            },
-            { signal, passive: true },
-        );
-
         syncFromPB<{ blockId: string }>(
             'PB:SCROLL_INTO_BLOCK',
             (data) => {
                 if (data.blockId === block.id && blockRef.current) {
                     blockRef.current.scrollIntoView({ behavior: 'smooth' });
-                }
-            },
-            { signal },
-        );
-
-        syncFromPB<{ blockId: string }>(
-            'PB:BLOCK_HOVER',
-            (data) => {
-                if (data.blockId === block.id && blockRef.current) {
-                    const { top, left } = blockRef.current.getBoundingClientRect();
-
-                    syncToPB('APP:BLOCK_HOVER', { blockId: block.id, position: { top, left } });
                 }
             },
             { signal },
@@ -158,7 +83,7 @@ const BlockPBMode = ({ block }: Props) => {
         return () => {
             abortController.abort();
         };
-    }, [block]);
+    }, [block.id]);
 
     const handleAnimationEnd = (event: React.AnimationEvent) => {
         if (event.animationName === 'remove-field') {
@@ -172,7 +97,7 @@ const BlockPBMode = ({ block }: Props) => {
             className={className}
             data-ibexa-block-id={block.id}
             draggable={isDragging}
-            style={{ position: 'relative' }}
+            style={{ position: 'relative', scrollMargin: '2px' }}
             onAnimationEnd={handleAnimationEnd}
         >
             <div className={innerClassName}>
@@ -183,7 +108,7 @@ const BlockPBMode = ({ block }: Props) => {
                         ))}
                     </ul>
                 )}
-                {BlockComponent ? <BlockComponent data={block.attributes} /> : fallback?.(block)}
+                {content}
             </div>
         </div>
     );

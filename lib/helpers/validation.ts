@@ -25,18 +25,3 @@ export const getInvalidAttributeIds = (block: Block, config: BlockConfig): strin
         })
         .map((attribute) => attribute.name);
 };
-
-export const validateBlock = (block: Block, config: BlockConfig): boolean => {
-    if (!config.visible) {
-        return false;
-    }
-
-    return block.attributes.every((attribute) => {
-        const attrConfig = config.attributes.find((a) => a.id === attribute.name);
-
-        const constraints = attrConfig?.constraints;
-        const hasNotBlank = !Array.isArray(constraints) && constraints?.['not_blank'];
-
-        return !(hasNotBlank && isAttributeValueBlank(attribute.value));
-    });
-};

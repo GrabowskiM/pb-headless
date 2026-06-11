@@ -3,6 +3,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { syncToPB, syncFromPB } from '../../helpers/communication';
 import { createCssClassNames } from '../../helpers/cssClassNames';
 import Block from '../Block';
+import DroppablePlaceholder from './DroppablePlaceholder';
 import useFieldValue from '../../hooks/useFieldValue';
 import { type Zone as ZoneData } from '../../types/FieldValue';
 
@@ -12,9 +13,14 @@ export interface Props {
 
 const ZonePBMode = ({ zone }: Props) => {
     const zoneRef = useRef<HTMLDivElement>(null);
+    const zoneBlocksRef = useRef(zone.blocks);
     const [isDragOver, setIsDragOver] = useState(false);
     const [placeholderPositionIndex, setPlaceholderPositionIndex] = useState<number | null>(null);
     const fieldValue = useFieldValue();
+
+    useEffect(() => {
+        zoneBlocksRef.current = zone.blocks;
+    }, [zone.blocks]);
     const zoneNo = useMemo(() => (fieldValue?.zones.findIndex((z) => z.id === zone.id) ?? -1) + 1, [fieldValue, zone.id]);
     const className = createCssClassNames(['landing-page__zone', `landing-page__zone--${zone.id}`, 'm-page-builder__zone'], {
         'm-page-builder__zone--dragover': isDragOver,
@@ -50,28 +56,23 @@ const ZonePBMode = ({ zone }: Props) => {
             }),
             syncFromPB('PB:DROP', () => {
                 setIsDragOver(false);
+                setPlaceholderPositionIndex((currentIndex) => {
+                    if (currentIndex !== null) {
+                        const nextBlockId = zoneBlocksRef.current[currentIndex]?.id;
 
-                if (placeholderPositionIndex !== null) {
-                    const nextBlockId = zone.blocks[placeholderPositionIndex]?.id;
+                        syncToPB('DROP_RESPONSE', { zoneId: zone.id, nextBlockId });
+                    }
 
-                    setPlaceholderPositionIndex(null);
-                    syncToPB('DROP_RESPONSE', { zoneId: zone.id, nextBlockId });
-                }
+                    return null;
+                });
             }),
         ];
 
         return () => cleanups.forEach((cleanup) => cleanup());
-    }, [zone.id, zone.blocks, placeholderPositionIndex]);
+    }, [zone.id]);
 
     return (
-        <div
-            ref={zoneRef}
-            className={className}
-            data-ibexa-zone-id={zone.id}
-            data-call-to-action-text="Drag and drop blocks here"
-            onDragOver={() => setIsDragOver(true)}
-            onDragLeave={() => setIsDragOver(false)}
-        >
+        <div ref={zoneRef} className={className} data-ibexa-zone-id={zone.id} data-call-to-action-text="Drag and drop blocks here">
             <fieldset className="m-page-builder__fieldset">
                 <legend className="m-page-builder__legend">Drop zone {zoneNo}</legend>
             </fieldset>
@@ -79,11 +80,11 @@ const ZonePBMode = ({ zone }: Props) => {
                 <>
                     {zone.blocks.map((block, index) => (
                         <Fragment key={block.id}>
-                            {index === placeholderPositionIndex && <div className="droppable-placeholder" />}
+                            {index === placeholderPositionIndex && <DroppablePlaceholder />}
                             <Block block={block} />
                         </Fragment>
                     ))}
-                    {placeholderPositionIndex === zone.blocks.length && <div className="droppable-placeholder" />}
+                    {placeholderPositionIndex === zone.blocks.length && <DroppablePlaceholder />}
                 </>
             ) : (
                 <div className="landing-page__zone-empty">Drop blocks here</div>

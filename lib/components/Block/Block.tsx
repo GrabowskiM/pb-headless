@@ -1,4 +1,4 @@
-import useBlockRegistry from '../../hooks/useBlockRegistry';
+import useBlock from '../../hooks/useBlock';
 import useIsPBMode from '../../hooks/useIsPBMode';
 import { type Block as BlockData } from '../../types/FieldValue';
 import BlockPBMode from './BlockPBMode';
@@ -9,19 +9,13 @@ export interface Props {
 
 const Block = ({ block }: Props) => {
     const isPBMode = useIsPBMode();
-    const registry = useBlockRegistry()!;
-    const BlockComponent = registry.current.components[block.type];
-    const fallback = registry.current.fallback;
+    const content = useBlock(block);
 
     if (isPBMode) {
         return <BlockPBMode block={block} />;
     }
 
-    return (
-        <div className={`landing-page__block block_${block.type}`} data-ibexa-block-id={block.id}>
-            {BlockComponent ? <BlockComponent data={block.attributes} /> : fallback?.(block)}
-        </div>
-    );
+    return content;
 };
 
 export default Block;

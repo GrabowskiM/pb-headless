@@ -15,11 +15,11 @@ const Zone = ({ zone }: Props) => {
     }
 
     return (
-        <div className={`landing-page__zone landing-page__zone--${zone.id}`} data-ibexa-zone-id={zone.id}>
+        <>
             {zone.blocks.map((block) => (
                 <Block key={block.id} block={block} />
             ))}
-        </div>
+        </>
     );
 };
 

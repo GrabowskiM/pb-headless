@@ -3,23 +3,18 @@ import { type ComponentType, type ReactNode, useEffect, useRef, useState } from 
 import { syncFromPB, syncToPB } from '../../helpers/communication';
 import { BlockRegistryContext, type BlockRegistry, type BlockComponentProps } from '../../context/BlockRegistry';
 import { IsPBModeContext } from '../../context/IsPBMode';
-import { type BlockConfig } from '../../context/BlocksConfig';
 import { type InitModeMessage } from '../../types/PBMessages';
 import FallbackBlock from '../FallbackBlock';
-import LandingPagePBMode, { type LandingPagePBModeHandle } from './LandingPagePBMode';
+import LandingPagePBMode from './LandingPagePBMode';
 
 export interface Props {
-    blocksConfig?: BlockConfig[];
-    blocksIdMap?: Map<string, unknown>;
-    fieldValue?: unknown;
     blockComponents?: Record<string, ComponentType<BlockComponentProps>>;
     children: ReactNode;
 }
 
-const LandingPage = ({ blocksConfig, blocksIdMap, fieldValue, blockComponents, children }: Props) => {
+const LandingPage = ({ blockComponents, children }: Props) => {
     const [isPBMode, setIsPBMode] = useState(false);
-    const pbInitDataRef = useRef<InitModeMessage | null>(null);
-    const landingPagePBModeRef = useRef<LandingPagePBModeHandle>(null);
+    const [initData, setInitData] = useState<InitModeMessage | undefined>(undefined);
     const blockRegistryRef = useRef<BlockRegistry>({
         components: blockComponents ?? {},
         fallback: (block) => <FallbackBlock type={block.type} name={block.name} />,
@@ -29,7 +24,7 @@ const LandingPage = ({ blocksConfig, blocksIdMap, fieldValue, blockComponents, c
         syncToPB<never>('APP:INITIALIZED');
 
         const removeInitModeListener = syncFromPB<InitModeMessage | undefined>('PB:INIT_MODE', (data) => {
-            pbInitDataRef.current = data ?? null;
+            setInitData(data);
             setIsPBMode(true);
         });
 
@@ -38,27 +33,10 @@ const LandingPage = ({ blocksConfig, blocksIdMap, fieldValue, blockComponents, c
         };
     }, []);
 
-    useEffect(() => {
-        if (isPBMode) {
-            landingPagePBModeRef.current?.setInitData(pbInitDataRef.current ?? undefined);
-        }
-    }, [isPBMode]);
-
     return (
         <BlockRegistryContext.Provider value={blockRegistryRef}>
             <IsPBModeContext.Provider value={isPBMode}>
-                {isPBMode ? (
-                    <LandingPagePBMode
-                        ref={landingPagePBModeRef}
-                        blocksConfig={blocksConfig}
-                        blocksIdMap={blocksIdMap}
-                        fieldValue={fieldValue}
-                    >
-                        {children}
-                    </LandingPagePBMode>
-                ) : (
-                    children
-                )}
+                {isPBMode ? <LandingPagePBMode initData={initData}>{children}</LandingPagePBMode> : children}
             </IsPBModeContext.Provider>
         </BlockRegistryContext.Provider>
     );
